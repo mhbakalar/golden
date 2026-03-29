@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GOLDEN - K-Pop Demon Hunters Song Maker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Patrick+Hand&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    font-family: 'Patrick Hand', cursive;
+    overflow-x: hidden;
+    min-height: 100vh;
+    user-select: none;
+  }
+
+  /* Title */
+  .title-area {
+    text-align: center;
+    padding: 18px 0 8px;
+    position: relative;
+  }
+  .title-golden {
+    font-family: 'Bangers', cursive;
+    font-size: 64px;
+    color: #FFD700;
+    text-shadow: 3px 3px 0 #e6a800, 0 0 20px rgba(255,215,0,0.5);
+    letter-spacing: 12px;
+  }
+  .title-sub {
+    font-family: 'Bangers', cursive;
+    font-size: 28px;
+    color: #ff69b4;
+    text-shadow: 2px 2px 0 #c0396e;
+    letter-spacing: 4px;
+  }
+
+  /* Floating notes decoration */
+  .floating-notes {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .float-note {
+    position: absolute;
+    font-size: 24px;
+    color: rgba(255,215,0,0.4);
+    animation: floatDown linear infinite;
+  }
+  @keyframes floatDown {
+    0% { transform: translateY(-30px) rotate(0deg); opacity: 0.7; }
+    100% { transform: translateY(120px) rotate(360deg); opacity: 0; }
+  }
+
+  /* Characters stage */
+  .stage {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 10px 0;
+    position: relative;
+  }
+  .stage canvas {
+    image-rendering: auto;
+  }
+  .ground-line {
+    position: absolute;
+    bottom: 8px;
+    left: 10%; right: 10%;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, #555, #777, #555, transparent);
+    border-radius: 2px;
+  }
+
+  /* Music Grid */
+  .music-section {
+    padding: 10px 20px;
+  }
+  .section-label {
+    color: #FFD700;
+    font-family: 'Bangers', cursive;
+    font-size: 24px;
+    letter-spacing: 3px;
+    margin-bottom: 6px;
+  }
+  .controls-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 18px;
+    padding: 8px 18px;
+    border: 3px solid;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: bold;
+  }
+  .btn:hover { transform: scale(1.05); }
+  .btn:active { transform: scale(0.95); }
+
+  .btn-play {
+    background: #4CAF50;
+    color: white;
+    border-color: #2d7a30;
+  }
+  .btn-stop {
+    background: #f44336;
+    color: white;
+    border-color: #b71c1c;
+  }
+  .btn-clear {
+    background: #ff9800;
+    color: white;
+    border-color: #c06000;
+  }
+  .btn-magic {
+    background: linear-gradient(135deg, #9b59b6, #e91e9b);
+    color: white;
+    border-color: #7b2d8e;
+  }
+  .btn-beat {
+    background: #2196F3;
+    color: white;
+    border-color: #0d47a1;
+  }
+  .btn-beat.active {
+    background: #64B5F6;
+    box-shadow: 0 0 12px rgba(33,150,243,0.6);
+  }
+
+  .tempo-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #ccc;
+    font-size: 18px;
+  }
+  .tempo-control input[type=range] {
+    width: 100px;
+    accent-color: #FFD700;
+  }
+
+  /* Note grid */
+  .grid-container {
+    position: relative;
+    overflow-x: auto;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 2px solid rgba(255,215,0,0.2);
+    padding: 4px;
+  }
+  .note-grid {
+    display: grid;
+    gap: 1px;
+    min-width: fit-content;
+  }
+  .note-cell {
+    width: 38px;
+    height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.1s;
+    position: relative;
+  }
+  .note-cell:hover {
+    filter: brightness(1.4);
+  }
+  .note-cell.active {
+    transform: scale(1.1);
+    z-index: 2;
+    box-shadow: 0 0 8px rgba(255,255,255,0.4);
+  }
+  .note-cell.playing {
+    filter: brightness(2) !important;
+    box-shadow: 0 0 15px rgba(255,255,255,0.7) !important;
+  }
+  .playhead {
+    position: absolute;
+    top: 0;
+    width: 3px;
+    height: 100%;
+    background: #FFD700;
+    box-shadow: 0 0 10px rgba(255,215,0,0.8);
+    transition: left 0.05s linear;
+    z-index: 10;
+    pointer-events: none;
+    border-radius: 2px;
+  }
+
+  /* Note labels */
+  .row-label {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 6px;
+    color: #ccc;
+    font-size: 14px;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+
+  /* Scale selector */
+  .scale-select {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 16px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 2px solid #9b59b6;
+    background: #2a1a3e;
+    color: #e0b0ff;
+    cursor: pointer;
+  }
+
+  /* Instrument selector */
+  .instrument-select {
+    font-family: 'Patrick Hand', cursive;
+    font-size: 16px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 2px solid #e91e9b;
+    background: #3a1a2e;
+    color: #ffb0d0;
+    cursor: pointer;
+  }
+
+  /* Metronome visual */
+  .metronome-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #333;
+    border: 2px solid #666;
+    transition: all 0.05s;
+    flex-shrink: 0;
+  }
+  .metronome-indicator.tick {
+    background: #FFD700;
+    box-shadow: 0 0 12px rgba(255,215,0,0.8);
+    border-color: #FFD700;
+  }
+
+  /* Beat pattern row */
+  .beat-section {
+    padding: 8px 20px;
+  }
+  .beat-grid {
+    display: flex;
+    gap: 3px;
+    flex-wrap: wrap;
+  }
+  .beat-cell {
+    width: 38px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.1s;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .beat-cell.off { background: rgba(255,255,255,0.05); }
+  .beat-cell.kick { background: #e74c3c; }
+  .beat-cell.snare { background: #3498db; }
+  .beat-cell.hihat { background: #f39c12; }
+  .beat-cell:hover { filter: brightness(1.3); }
+  .beat-cell.playing-col {
+    box-shadow: 0 0 10px rgba(255,215,0,0.6);
+  }
+
+  .beat-labels {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-right: 6px;
+  }
+  .beat-label {
+    height: 24px;
+    display: flex;
+    align-items: center;
+    color: #aaa;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .beat-row-wrap {
+    display: flex;
+    align-items: flex-start;
+  }
+
+  /* Characters bounce animation */
+  @keyframes danceBounce {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25% { transform: translateY(-8px) rotate(-3deg); }
+    75% { transform: translateY(-4px) rotate(3deg); }
+  }
+  .dancing {
+    animation: danceBounce 0.4s ease-in-out infinite;
+  }
+
+  /* Key helper */
+  .key-helper {
+    color: #888;
+    font-size: 14px;
+    padding: 4px 20px;
+  }
+
+  .row-colors {
+    display: flex;
+    gap: 2px;
+    margin-left: 4px;
+    align-items: center;
+  }
+</style>
+</head>
+<body>
+
+<div class="title-area">
+  <div class="floating-notes" id="floatingNotes"></div>
+  <div class="title-golden">GOLDEN</div>
+  <div class="title-sub">K-POP DEMON HUNTERS</div>
+</div>
+
+<div class="stage" id="stage">
+  <canvas id="char1" width="140" height="190"></canvas>
+  <canvas id="char2" width="160" height="210"></canvas>
+  <canvas id="char3" width="140" height="190"></canvas>
+  <div class="ground-line"></div>
+</div>
+
+<div class="music-section">
+  <div class="section-label">SONG MAKER</div>
+  <div class="controls-row">
+    <button class="btn btn-play" id="btnPlay" onclick="togglePlay()">&#9654; Play</button>
+    <button class="btn btn-stop" onclick="stopPlay()">&#9632; Stop</button>
+    <button class="btn btn-clear" onclick="clearGrid()">Clear</button>
+    <button class="btn btn-magic" onclick="generateMelody()">&#10024; Magic Melody</button>
+    <button class="btn btn-beat" id="btnBeat" onclick="toggleBeat()">Beat: OFF</button>
+    <div class="metronome-indicator" id="metronome"></div>
+    <div class="tempo-control">
+      <span>BPM:</span>
+      <input type="range" id="tempoSlider" min="60" max="180" value="120" oninput="updateTempo(this.value)">
+      <span id="tempoVal">120</span>
+    </div>
+    <select class="scale-select" id="scaleSelect" onchange="changeScale()">
+      <option value="pentatonic">Pentatonic (Easy!)</option>
+      <option value="major">Major Scale</option>
+      <option value="minor">Minor Scale</option>
+      <option value="kpop">K-Pop Mode</option>
+    </select>
+    <select class="instrument-select" id="instrumentSelect" onchange="changeInstrument()">
+      <option value="synth">Synth</option>
+      <option value="bell">Bell</option>
+      <option value="pluck">Pluck</option>
+      <option value="pad">Pad</option>
+    </select>
+  </div>
+
+  <div class="grid-container" id="gridContainer">
+    <div class="playhead" id="playhead" style="display:none;"></div>
+    <div id="noteGrid"></div>
+  </div>
+</div>
+
+<div class="beat-section">
+  <div class="section-label">DRUM BEAT</div>
+  <div class="beat-row-wrap">
+    <div class="beat-labels">
+      <div class="beat-label">Kick</div>
+      <div class="beat-label">Snare</div>
+      <div class="beat-label">Hi-Hat</div>
+    </div>
+    <div id="beatGrid"></div>
+  </div>
+</div>
+
+<div class="key-helper">Click cells to add notes. Use "Magic Melody" for instant K-pop vibes! Toggle the beat for drums.</div>
+
+<script>
+// ============ AUDIO ENGINE ============
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let ctx;
+let audioReady = false;
+function ensureAudio() {
+  if (!ctx) {
+    ctx = new AudioCtx();
+  }
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(() => { audioReady = true; });
+  } else {
+    audioReady = true;
+  }
+}
+// Init audio on first user click anywhere
+document.addEventListener('click', () => ensureAudio(), { once: true });
+document.addEventListener('touchstart', () => ensureAudio(), { once: true });
+
+// Scales
+const SCALES = {
+  pentatonic: [0, 2, 4, 7, 9],
+  major: [0, 2, 4, 5, 7, 9, 11],
+  minor: [0, 2, 3, 5, 7, 8, 10],
+  kpop: [0, 2, 3, 5, 7, 9, 10] // dorian - common in k-pop
+};
+
+const NOTE_NAMES_ALL = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const COLS = 16;
+let currentScale = 'pentatonic';
+let currentInstrument = 'synth';
+let bpm = 120;
+let isPlaying = false;
+let playInterval = null;
+let currentCol = -1;
+let beatEnabled = false;
+
+// Build note rows from scale
+function getScaleNotes(scaleName) {
+  const intervals = SCALES[scaleName];
+  const baseOctave = 4;
+  const notes = [];
+  // 2 octaves
+  for (let oct = baseOctave + 1; oct >= baseOctave; oct--) {
+    for (let i = intervals.length - 1; i >= 0; i--) {
+      const midi = 12 * (oct + 1) + intervals[i];
+      const name = NOTE_NAMES_ALL[intervals[i]] + oct;
+      notes.push({ midi, name, interval: intervals[i] });
+    }
+  }
+  return notes;
+}
+
+let scaleNotes = getScaleNotes(currentScale);
+let grid = []; // [row][col]
+let beatGrid = [[],[],[]]; // kick, snare, hihat x 16
+
+// Row colors matching kid-drawing aesthetic
+const ROW_COLORS = [
+  '#ff6b9d','#ff85a8','#ff9fb3','#ffb9be',
+  '#ffd700','#ffe033','#ffe966','#fff199',
+  '#7bc8ff','#95d5ff','#afe2ff','#c9efff',
+  '#b088f9','#c0a0ff','#d0b8ff','#e0d0ff',
+  '#ff6b9d','#ff85a8','#ff9fb3','#ffb9be',
+  '#ffd700','#ffe033'
+];
+
+function initGrid() {
+  grid = [];
+  for (let r = 0; r < scaleNotes.length; r++) {
+    grid.push(new Array(COLS).fill(false));
+  }
+}
+
+function initBeatGrid() {
+  beatGrid = [
+    [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+    [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0]
+  ];
+}
+
+function renderNoteGrid() {
+  const container = document.getElementById('noteGrid');
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = `44px repeat(${COLS}, 38px)`;
+  container.style.gridTemplateRows = `repeat(${scaleNotes.length}, 28px)`;
+  container.style.gap = '1px';
+  container.innerHTML = '';
+
+  for (let r = 0; r < scaleNotes.length; r++) {
+    const label = document.createElement('div');
+    label.className = 'row-label';
+    label.textContent = scaleNotes[r].name;
+    label.style.color = ROW_COLORS[r % ROW_COLORS.length];
+    container.appendChild(label);
+
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'note-cell';
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      const baseColor = ROW_COLORS[r % ROW_COLORS.length];
+      if (grid[r][c]) {
+        cell.style.background = baseColor;
+        cell.classList.add('active');
+      } else {
+        cell.style.background = hexToRgba(baseColor, 0.12);
+      }
+      // Measure lines
+      if (c % 4 === 0) {
+        cell.style.borderLeft = '2px solid rgba(255,215,0,0.3)';
+      }
+      cell.addEventListener('mousedown', () => toggleCell(r, c));
+      cell.addEventListener('mouseenter', (e) => { if (e.buttons === 1) toggleCell(r, c); });
+      container.appendChild(cell);
+    }
+  }
+}
+
+function renderBeatGrid() {
+  const container = document.getElementById('beatGrid');
+  container.innerHTML = '';
+  container.style.display = 'grid';
+  container.style.gridTemplateColumns = `repeat(${COLS}, 38px)`;
+  container.style.gridTemplateRows = 'repeat(3, 24px)';
+  container.style.gap = '3px';
+
+  const colors = ['#e74c3c', '#3498db', '#f39c12'];
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'beat-cell ' + (beatGrid[r][c] ? ['kick','snare','hihat'][r] : 'off');
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      if (c % 4 === 0) cell.style.borderLeft = '2px solid rgba(255,215,0,0.3)';
+      cell.addEventListener('click', () => {
+        beatGrid[r][c] = beatGrid[r][c] ? 0 : 1;
+        cell.className = 'beat-cell ' + (beatGrid[r][c] ? ['kick','snare','hihat'][r] : 'off');
+      });
+      container.appendChild(cell);
+    }
+  }
+}
+
+function toggleCell(r, c) {
+  ensureAudio();
+  grid[r][c] = !grid[r][c];
+  const cells = document.querySelectorAll(`.note-cell[data-row="${r}"][data-col="${c}"]`);
+  const baseColor = ROW_COLORS[r % ROW_COLORS.length];
+  cells.forEach(cell => {
+    if (grid[r][c]) {
+      cell.style.background = baseColor;
+      cell.classList.add('active');
+      playNote(scaleNotes[r].midi, 0.15);
+    } else {
+      cell.style.background = hexToRgba(baseColor, 0.12);
+      cell.classList.remove('active');
+    }
+  });
+}
+
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ============ SYNTH ============
+function midiToFreq(midi) {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+function playNote(midi, duration = 0.2) {
+  ensureAudio();
+  const freq = midiToFreq(midi);
+  const t = ctx.currentTime;
+  const gain = ctx.createGain();
+  gain.connect(ctx.destination);
+
+  if (currentInstrument === 'synth') {
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    osc.connect(gain);
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    osc.start(t);
+    osc.stop(t + duration);
+  } else if (currentInstrument === 'bell') {
+    const osc = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    osc2.type = 'sine';
+    osc2.frequency.value = freq * 2.5;
+    const g2 = ctx.createGain();
+    g2.gain.setValueAtTime(0.08, t);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + duration * 1.5);
+    osc.connect(gain);
+    osc2.connect(g2);
+    g2.connect(ctx.destination);
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration * 1.5);
+    osc.start(t); osc.stop(t + duration * 1.5);
+    osc2.start(t); osc2.stop(t + duration * 1.5);
+  } else if (currentInstrument === 'pluck') {
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = freq;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(freq * 6, t);
+    filter.frequency.exponentialRampToValueAtTime(freq * 0.5, t + duration);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+    osc.start(t); osc.stop(t + duration);
+  } else if (currentInstrument === 'pad') {
+    for (let i = 0; i < 3; i++) {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq * (1 + i * 0.003);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.08, t);
+      g.gain.linearRampToValueAtTime(0.12, t + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.001, t + duration * 2);
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start(t); osc.stop(t + duration * 2);
+    }
+  }
+}
+
+function playKick() {
+  ensureAudio();
+  const t = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(150, t);
+  osc.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+  gain.gain.setValueAtTime(0.6, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(t); osc.stop(t + 0.2);
+}
+
+function playSnare() {
+  ensureAudio();
+  const t = ctx.currentTime;
+  // Noise
+  const bufferSize = ctx.sampleRate * 0.1;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(0.25, t);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'highpass';
+  filter.frequency.value = 1000;
+  noise.connect(filter);
+  filter.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
+  noise.start(t);
+  // Tone
+  const osc = ctx.createOscillator();
+  osc.type = 'triangle';
+  osc.frequency.value = 180;
+  const oscGain = ctx.createGain();
+  oscGain.gain.setValueAtTime(0.3, t);
+  oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+  osc.connect(oscGain);
+  oscGain.connect(ctx.destination);
+  osc.start(t); osc.stop(t + 0.08);
+}
+
+function playHihat() {
+  ensureAudio();
+  const t = ctx.currentTime;
+  const bufferSize = ctx.sampleRate * 0.05;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  const noise = ctx.createBufferSource();
+  noise.buffer = buffer;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.12, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'highpass';
+  filter.frequency.value = 5000;
+  noise.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  noise.start(t);
+}
+
+// ============ PLAYBACK ============
+function togglePlay() {
+  if (isPlaying) { stopPlay(); return; }
+  ensureAudio();
+  isPlaying = true;
+  currentCol = -1;
+  document.getElementById('btnPlay').innerHTML = '&#10074;&#10074; Pause';
+  document.getElementById('playhead').style.display = 'block';
+  startCharDance(true);
+  tick();
+  const stepMs = (60 / bpm) * 1000 / 2; // 8th notes
+  playInterval = setInterval(tick, stepMs);
+}
+
+function stopPlay() {
+  isPlaying = false;
+  clearInterval(playInterval);
+  currentCol = -1;
+  document.getElementById('btnPlay').innerHTML = '&#9654; Play';
+  document.getElementById('playhead').style.display = 'none';
+  document.getElementById('metronome').classList.remove('tick');
+  startCharDance(false);
+  // Clear playing highlights
+  document.querySelectorAll('.note-cell.playing').forEach(c => c.classList.remove('playing'));
+  document.querySelectorAll('.beat-cell.playing-col').forEach(c => c.classList.remove('playing-col'));
+}
+
+function tick() {
+  currentCol = (currentCol + 1) % COLS;
+
+  // Playhead position
+  const gridEl = document.getElementById('noteGrid');
+  const firstCell = gridEl.querySelector(`[data-col="${currentCol}"]`);
+  if (firstCell) {
+    const playhead = document.getElementById('playhead');
+    playhead.style.left = (firstCell.offsetLeft + 18) + 'px';
+  }
+
+  // Metronome visual
+  const met = document.getElementById('metronome');
+  if (currentCol % 4 === 0) {
+    met.classList.add('tick');
+    setTimeout(() => met.classList.remove('tick'), 100);
+  }
+
+  // Clear previous highlights
+  document.querySelectorAll('.note-cell.playing').forEach(c => c.classList.remove('playing'));
+  document.querySelectorAll('.beat-cell.playing-col').forEach(c => c.classList.remove('playing-col'));
+
+  // Play melody notes
+  const stepDuration = (60 / bpm) / 2;
+  for (let r = 0; r < scaleNotes.length; r++) {
+    if (grid[r][currentCol]) {
+      playNote(scaleNotes[r].midi, stepDuration * 0.9);
+      const cell = gridEl.querySelector(`[data-row="${r}"][data-col="${currentCol}"]`);
+      if (cell) cell.classList.add('playing');
+    }
+  }
+
+  // Play drums
+  if (beatEnabled) {
+    if (beatGrid[0][currentCol]) playKick();
+    if (beatGrid[1][currentCol]) playSnare();
+    if (beatGrid[2][currentCol]) playHihat();
+
+    // Highlight beat column
+    document.querySelectorAll(`.beat-cell[data-col="${currentCol}"]`).forEach(c => {
+      c.classList.add('playing-col');
+    });
+  }
+}
+
+function updateTempo(val) {
+  bpm = parseInt(val);
+  document.getElementById('tempoVal').textContent = val;
+  if (isPlaying) {
+    clearInterval(playInterval);
+    const stepMs = (60 / bpm) * 1000 / 2;
+    playInterval = setInterval(tick, stepMs);
+  }
+}
+
+function toggleBeat() {
+  beatEnabled = !beatEnabled;
+  const btn = document.getElementById('btnBeat');
+  btn.textContent = 'Beat: ' + (beatEnabled ? 'ON' : 'OFF');
+  btn.classList.toggle('active', beatEnabled);
+}
+
+function changeScale() {
+  currentScale = document.getElementById('scaleSelect').value;
+  scaleNotes = getScaleNotes(currentScale);
+  initGrid();
+  renderNoteGrid();
+}
+
+function changeInstrument() {
+  currentInstrument = document.getElementById('instrumentSelect').value;
+}
+
+function clearGrid() {
+  initGrid();
+  renderNoteGrid();
+}
+
+// ============ MAGIC MELODY GENERATOR ============
+function generateMelody() {
+  ensureAudio();
+  initGrid();
+  const rows = scaleNotes.length;
+  const centerRow = Math.floor(rows / 2);
+
+  // Generate a catchy melody using k-pop patterns
+  // Pattern: call and response, with repetition
+  const patterns = [
+    [0, -1, -2, -1],   // stepwise
+    [0, -2, -4, -2],   // leaps
+    [0, 0, -1, -2],    // repeated then descend
+    [-3, -2, -1, 0],   // ascending
+    [0, -1, 0, 1],     // neighbor tones
+  ];
+
+  const chosen = patterns[Math.floor(Math.random() * patterns.length)];
+  const startRow = centerRow + Math.floor(Math.random() * 3) - 1;
+
+  // First phrase (bars 1-2)
+  for (let i = 0; i < 4; i++) {
+    const r = Math.max(0, Math.min(rows - 1, startRow + chosen[i]));
+    grid[r][i * 2] = true;
+    // Add some 8th note movement
+    if (Math.random() > 0.5 && i < 3) {
+      const passing = Math.max(0, Math.min(rows - 1, r + (Math.random() > 0.5 ? 1 : -1)));
+      grid[passing][i * 2 + 1] = true;
+    }
+  }
+
+  // Second phrase - repeat with variation (bars 3-4)
+  for (let i = 0; i < 4; i++) {
+    let r = Math.max(0, Math.min(rows - 1, startRow + chosen[i] + (i === 3 ? -2 : 0)));
+    grid[r][8 + i * 2] = true;
+    if (Math.random() > 0.6 && i < 3) {
+      const passing = Math.max(0, Math.min(rows - 1, r + (Math.random() > 0.5 ? 1 : -1)));
+      grid[passing][8 + i * 2 + 1] = true;
+    }
+  }
+
+  // Add some rhythmic accents (chords/doubles)
+  for (let c = 0; c < COLS; c += 4) {
+    if (Math.random() > 0.6) {
+      // Find an active note in this column and add harmony
+      for (let r = 0; r < rows; r++) {
+        if (grid[r][c] && r + 2 < rows) {
+          grid[r + 2][c] = true;
+          break;
+        }
+      }
+    }
+  }
+
+  renderNoteGrid();
+
+  // Auto-play preview
+  if (!isPlaying) togglePlay();
+}
+
+// ============ DRAW CHARACTERS (anime-style kid drawing) ============
+function drawCharacter(canvasId, config) {
+  const canvas = document.getElementById(canvasId);
+  const c = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  c.clearRect(0, 0, w, h);
+
+  const cx = w / 2;
+  const bodyY = h * 0.52;
+  const bodyW = config.bodyW || 40;
+  const bodyH = config.bodyH || 55;
+  const headR = 20;
+  const headY = bodyY - bodyH - headR + 4;
+
+  // ---- HAIR BEHIND (long flowing hair drawn first) ----
+  if (config.hairStyle === 'long') {
+    c.fillStyle = config.hairColor;
+    // Left flowing hair behind body
+    c.beginPath();
+    c.moveTo(cx - headR + 2, headY);
+    c.quadraticCurveTo(cx - headR - 8, headY + 30, cx - headR - 5, bodyY + bodyH * 0.6);
+    c.quadraticCurveTo(cx - headR - 2, bodyY + bodyH * 0.7, cx - headR + 8, bodyY + bodyH * 0.3);
+    c.fill();
+    // Right flowing hair behind body
+    c.beginPath();
+    c.moveTo(cx + headR - 2, headY);
+    c.quadraticCurveTo(cx + headR + 8, headY + 30, cx + headR + 5, bodyY + bodyH * 0.6);
+    c.quadraticCurveTo(cx + headR + 2, bodyY + bodyH * 0.7, cx + headR - 8, bodyY + bodyH * 0.3);
+    c.fill();
+  } else if (config.hairStyle === 'braid') {
+    // Long braid going BEHIND and to the side, not over face
+    c.strokeStyle = config.hairColor;
+    c.lineWidth = 7;
+    c.lineCap = 'round';
+    c.beginPath();
+    // Braid starts from back of head, goes to the right and down
+    c.moveTo(cx + headR - 4, headY + 4);
+    const braidX = cx + headR + 6;
+    for (let i = 0; i < 10; i++) {
+      c.lineTo(braidX + (i % 2 === 0 ? 5 : -5), headY + 8 + i * 9);
+    }
+    c.stroke();
+    // Braid tie
+    c.fillStyle = '#FFD700';
+    c.beginPath();
+    c.arc(braidX, headY + 8 + 9 * 9 + 2, 4, 0, Math.PI * 2);
+    c.fill();
+    // Hair volume on head
+    c.fillStyle = config.hairColor;
+    c.beginPath();
+    c.ellipse(cx, headY - headR + 6, headR + 4, headR - 2, 0, Math.PI, 2 * Math.PI);
+    c.fill();
+    // Side hair
+    c.beginPath();
+    c.moveTo(cx - headR, headY - 2);
+    c.quadraticCurveTo(cx - headR - 6, headY + 15, cx - headR + 2, headY + 28);
+    c.lineTo(cx - headR + 6, headY + 5);
+    c.fill();
+  } else if (config.hairStyle === 'twintail') {
+    c.fillStyle = config.hairColor;
+    // Left twintail
+    c.beginPath();
+    c.moveTo(cx - headR + 2, headY - 5);
+    c.quadraticCurveTo(cx - headR - 15, headY + 20, cx - headR - 10, bodyY + bodyH * 0.5);
+    c.quadraticCurveTo(cx - headR - 5, bodyY + bodyH * 0.55, cx - headR + 5, headY + 15);
+    c.fill();
+    // Right twintail
+    c.beginPath();
+    c.moveTo(cx + headR - 2, headY - 5);
+    c.quadraticCurveTo(cx + headR + 15, headY + 20, cx + headR + 10, bodyY + bodyH * 0.5);
+    c.quadraticCurveTo(cx + headR + 5, bodyY + bodyH * 0.55, cx + headR - 5, headY + 15);
+    c.fill();
+    // Hair ties
+    c.fillStyle = '#ff69b4';
+    c.beginPath();
+    c.arc(cx - headR - 2, headY + 2, 4, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.arc(cx + headR + 2, headY + 2, 4, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // ---- LEGS (stick style like the drawing) ----
+  c.strokeStyle = config.limbColor;
+  c.lineWidth = 5;
+  c.lineCap = 'round';
+  c.beginPath();
+  c.moveTo(cx - 10, bodyY + bodyH * 0.35);
+  c.lineTo(cx - 16, bodyY + bodyH * 0.35 + 38);
+  c.stroke();
+  c.beginPath();
+  c.moveTo(cx + 10, bodyY + bodyH * 0.35);
+  c.lineTo(cx + 16, bodyY + bodyH * 0.35 + 38);
+  c.stroke();
+  // Boots
+  c.fillStyle = config.bootColor || config.limbColor;
+  c.beginPath();
+  c.ellipse(cx - 16, bodyY + bodyH * 0.35 + 40, 8, 5, 0, 0, Math.PI * 2);
+  c.fill();
+  c.beginPath();
+  c.ellipse(cx + 16, bodyY + bodyH * 0.35 + 40, 8, 5, 0, 0, Math.PI * 2);
+  c.fill();
+
+  // ---- BODY (yellow striped oval like the drawing) ----
+  c.save();
+  c.beginPath();
+  c.ellipse(cx, bodyY, bodyW, bodyH, 0, 0, Math.PI * 2);
+  c.fillStyle = '#FFE033';
+  c.fill();
+  c.strokeStyle = '#333';
+  c.lineWidth = 2.5;
+  c.stroke();
+  c.clip();
+  c.strokeStyle = config.stripeColor || '#c8a800';
+  c.lineWidth = 3;
+  for (let y = bodyY - bodyH; y < bodyY + bodyH; y += 8) {
+    c.beginPath();
+    c.moveTo(cx - bodyW, y);
+    c.lineTo(cx + bodyW, y);
+    c.stroke();
+  }
+  c.restore();
+  c.beginPath();
+  c.ellipse(cx, bodyY, bodyW, bodyH, 0, 0, Math.PI * 2);
+  c.strokeStyle = '#5a5a00';
+  c.lineWidth = 2.5;
+  c.stroke();
+
+  // ---- ARMS ----
+  c.strokeStyle = config.limbColor;
+  c.lineWidth = 5;
+  c.lineCap = 'round';
+  const lHandX = cx - bodyW - 18 + (config.armSpread || 0);
+  const lHandY = bodyY - 28;
+  const rHandX = cx + bodyW + 18 - (config.armSpread || 0);
+  const rHandY = bodyY - 28;
+  c.beginPath();
+  c.moveTo(cx - bodyW + 5, bodyY - 8);
+  c.lineTo(lHandX, lHandY);
+  c.stroke();
+  c.beginPath();
+  c.moveTo(cx + bodyW - 5, bodyY - 8);
+  c.lineTo(rHandX, rHandY);
+  c.stroke();
+  // Hands
+  c.fillStyle = '#ffcdd2';
+  c.beginPath(); c.arc(lHandX, lHandY - 2, 5, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.arc(rHandX, rHandY - 2, 5, 0, Math.PI * 2); c.fill();
+
+  // ---- WEAPONS ----
+  if (config.weapon) {
+    const hx = rHandX, hy = rHandY - 2;
+    if (config.weapon.type === 'sword') {
+      // Glowing sword
+      c.save();
+      c.shadowColor = config.weapon.glow;
+      c.shadowBlur = 10;
+      c.strokeStyle = config.weapon.color;
+      c.lineWidth = 4;
+      c.beginPath(); c.moveTo(hx, hy); c.lineTo(hx + 12, hy - 40); c.stroke();
+      // Crossguard
+      c.lineWidth = 3;
+      c.beginPath(); c.moveTo(hx - 6, hy - 4); c.lineTo(hx + 6, hy - 4); c.stroke();
+      c.restore();
+    } else if (config.weapon.type === 'staff') {
+      c.save();
+      c.shadowColor = config.weapon.glow;
+      c.shadowBlur = 12;
+      c.strokeStyle = config.weapon.color;
+      c.lineWidth = 4;
+      c.beginPath(); c.moveTo(hx, hy); c.lineTo(hx + 4, hy - 50); c.stroke();
+      // Star
+      c.fillStyle = config.weapon.glow;
+      drawStar(c, hx + 4, hy - 54, 5, 8, 4);
+      c.restore();
+    }
+  }
+  if (config.weaponLeft) {
+    const hx = lHandX, hy = lHandY - 2;
+    c.save();
+    c.shadowColor = config.weaponLeft.glow || config.weaponLeft.color;
+    c.shadowBlur = 10;
+    c.strokeStyle = config.weaponLeft.color;
+    c.lineWidth = 4;
+    c.beginPath(); c.moveTo(hx, hy); c.lineTo(hx - 12, hy - 40); c.stroke();
+    c.lineWidth = 3;
+    c.beginPath(); c.moveTo(hx - 18, hy - 4); c.lineTo(hx - 6, hy - 4); c.stroke();
+    c.restore();
+  }
+
+  // ---- HEAD ----
+  c.beginPath();
+  c.arc(cx, headY, headR, 0, Math.PI * 2);
+  c.fillStyle = '#ffe0e8';
+  c.fill();
+  c.strokeStyle = '#e0a0a0';
+  c.lineWidth = 1.5;
+  c.stroke();
+
+  // ---- ANIME EYES ----
+  // Big expressive eyes
+  const eyeY = headY - 1;
+  const eyeSpacing = 8;
+  for (let side = -1; side <= 1; side += 2) {
+    const ex = cx + side * eyeSpacing;
+    // White
+    c.fillStyle = '#fff';
+    c.beginPath();
+    c.ellipse(ex, eyeY, 6, 7, 0, 0, Math.PI * 2);
+    c.fill();
+    // Iris
+    c.fillStyle = config.eyeColor || '#4a2800';
+    c.beginPath();
+    c.ellipse(ex + side * 0.5, eyeY + 1, 4, 5, 0, 0, Math.PI * 2);
+    c.fill();
+    // Pupil
+    c.fillStyle = '#111';
+    c.beginPath();
+    c.arc(ex + side * 0.5, eyeY + 1.5, 2.5, 0, Math.PI * 2);
+    c.fill();
+    // Shine
+    c.fillStyle = '#fff';
+    c.beginPath();
+    c.arc(ex + side * 0.5 + 1.5, eyeY - 1, 1.8, 0, Math.PI * 2);
+    c.fill();
+    c.beginPath();
+    c.arc(ex + side * 0.5 - 1, eyeY + 3, 0.8, 0, Math.PI * 2);
+    c.fill();
+    // Upper eyelash line
+    c.strokeStyle = '#333';
+    c.lineWidth = 1.5;
+    c.beginPath();
+    c.ellipse(ex, eyeY - 1, 6, 5, 0, Math.PI + 0.3, 2 * Math.PI - 0.3);
+    c.stroke();
+  }
+
+  // Small anime nose
+  c.fillStyle = '#f0b0b0';
+  c.beginPath();
+  c.arc(cx, headY + 6, 1.2, 0, Math.PI * 2);
+  c.fill();
+
+  // Cute smile
+  c.strokeStyle = '#d07070';
+  c.lineWidth = 1.5;
+  c.beginPath();
+  c.arc(cx, headY + 8, 5, 0.15 * Math.PI, 0.85 * Math.PI);
+  c.stroke();
+
+  // Blush marks
+  c.fillStyle = 'rgba(255,100,120,0.25)';
+  c.beginPath();
+  c.ellipse(cx - 12, headY + 5, 5, 3, 0, 0, Math.PI * 2);
+  c.fill();
+  c.beginPath();
+  c.ellipse(cx + 12, headY + 5, 5, 3, 0, 0, Math.PI * 2);
+  c.fill();
+
+  // ---- HAIR ON TOP (bangs + volume) ----
+  c.fillStyle = config.hairColor;
+  // Top volume
+  c.beginPath();
+  c.ellipse(cx, headY - headR + 7, headR + 5, headR, 0, Math.PI, 2 * Math.PI);
+  c.fill();
+
+  // Bangs - spiky anime style
+  if (config.hairStyle !== 'braid') {
+    // These sit on the forehead
+    const bangsY = headY - headR + 8;
+    c.beginPath();
+    c.moveTo(cx - headR - 3, bangsY + 8);
+    c.lineTo(cx - headR + 4, bangsY - 2);
+    c.lineTo(cx - 8, bangsY + 10);
+    c.lineTo(cx - 3, bangsY);
+    c.lineTo(cx + 3, bangsY + 12);
+    c.lineTo(cx + 8, bangsY + 1);
+    c.lineTo(cx + headR - 4, bangsY + 10);
+    c.lineTo(cx + headR + 3, bangsY + 8);
+    c.quadraticCurveTo(cx + headR + 5, bangsY - 5, cx, bangsY - 8);
+    c.quadraticCurveTo(cx - headR - 5, bangsY - 5, cx - headR - 3, bangsY + 8);
+    c.fill();
+  } else {
+    // Side-swept bangs for braid girl - keep face clear
+    const bangsY = headY - headR + 8;
+    c.beginPath();
+    c.moveTo(cx - headR - 2, bangsY + 6);
+    c.lineTo(cx - 6, bangsY + 2);
+    c.lineTo(cx + 2, bangsY + 8);
+    c.lineTo(cx + headR - 2, bangsY + 3);
+    c.lineTo(cx + headR + 3, bangsY + 6);
+    c.quadraticCurveTo(cx + headR + 5, bangsY - 5, cx, bangsY - 8);
+    c.quadraticCurveTo(cx - headR - 5, bangsY - 5, cx - headR - 2, bangsY + 6);
+    c.fill();
+  }
+
+  // ---- ACCESSORY ----
+  if (config.accessory === 'crown') {
+    c.fillStyle = '#ff69b4';
+    c.strokeStyle = '#c0306a';
+    c.lineWidth = 1;
+    const crY = headY - headR - 5;
+    c.beginPath();
+    c.moveTo(cx - 12, crY + 8);
+    c.lineTo(cx - 10, crY);
+    c.lineTo(cx - 4, crY + 5);
+    c.lineTo(cx, crY - 4);
+    c.lineTo(cx + 4, crY + 5);
+    c.lineTo(cx + 10, crY);
+    c.lineTo(cx + 12, crY + 8);
+    c.closePath();
+    c.fill();
+    c.stroke();
+    // Gems
+    c.fillStyle = '#FFD700';
+    c.beginPath(); c.arc(cx, crY + 2, 2, 0, Math.PI * 2); c.fill();
+  } else if (config.accessory === 'bow') {
+    c.fillStyle = '#FFD700';
+    const bx = cx - headR + 2, by = headY - headR + 2;
+    c.beginPath();
+    c.moveTo(bx, by);
+    c.quadraticCurveTo(bx - 10, by - 8, bx - 3, by - 12);
+    c.quadraticCurveTo(bx + 2, by - 6, bx, by);
+    c.fill();
+    c.beginPath();
+    c.moveTo(bx, by);
+    c.quadraticCurveTo(bx + 10, by - 8, bx + 3, by - 12);
+    c.quadraticCurveTo(bx - 2, by - 6, bx, by);
+    c.fill();
+    c.fillStyle = '#e6a800';
+    c.beginPath(); c.arc(bx, by, 2.5, 0, Math.PI * 2); c.fill();
+  }
+}
+
+function drawStar(c, cx, cy, spikes, outerR, innerR) {
+  let rot = Math.PI / 2 * 3;
+  const step = Math.PI / spikes;
+  c.beginPath();
+  c.moveTo(cx, cy - outerR);
+  for (let i = 0; i < spikes; i++) {
+    c.lineTo(cx + Math.cos(rot) * outerR, cy + Math.sin(rot) * outerR);
+    rot += step;
+    c.lineTo(cx + Math.cos(rot) * innerR, cy + Math.sin(rot) * innerR);
+    rot += step;
+  }
+  c.closePath();
+  c.fill();
+}
+
+function drawAllCharacters() {
+  // Left girl - long pink hair, bow accessory
+  drawCharacter('char1', {
+    bodyW: 35, bodyH: 45,
+    limbColor: '#e08090',
+    bootColor: '#c06080',
+    stripeColor: '#c8a800',
+    hairColor: '#ff85a8',
+    hairStyle: 'twintail',
+    eyeColor: '#2a6040',
+    armSpread: 5,
+    accessory: 'bow',
+    weapon: null,
+  });
+  // Center girl - purple braid (behind, not on face), dual swords
+  drawCharacter('char2', {
+    bodyW: 40, bodyH: 55,
+    limbColor: '#b070c0',
+    bootColor: '#8050a0',
+    stripeColor: '#b8a000',
+    hairColor: '#7b2dbb',
+    hairStyle: 'braid',
+    eyeColor: '#6020a0',
+    armSpread: 0,
+    weapon: { type: 'sword', color: '#9b59b6', glow: '#d0a0ff' },
+    weaponLeft: { type: 'sword', color: '#9b59b6', glow: '#d0a0ff' },
+  });
+  // Right girl - long red hair, crown, staff
+  drawCharacter('char3', {
+    bodyW: 38, bodyH: 48,
+    limbColor: '#e06060',
+    bootColor: '#c04040',
+    stripeColor: '#c8a800',
+    hairColor: '#e74c3c',
+    hairStyle: 'long',
+    eyeColor: '#a02020',
+    armSpread: 3,
+    accessory: 'crown',
+    weapon: { type: 'staff', color: '#ff69b4', glow: '#ffb6d9' },
+  });
+}
+
+function startCharDance(on) {
+  ['char1','char2','char3'].forEach(id => {
+    document.getElementById(id).classList.toggle('dancing', on);
+  });
+}
+
+// ============ FLOATING NOTES DECORATION ============
+function spawnFloatingNotes() {
+  const container = document.getElementById('floatingNotes');
+  const symbols = ['\u266A', '\u266B', '\u266C', '\u2669'];
+  for (let i = 0; i < 20; i++) {
+    const note = document.createElement('div');
+    note.className = 'float-note';
+    note.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+    note.style.left = (Math.random() * 100) + '%';
+    note.style.animationDuration = (2 + Math.random() * 3) + 's';
+    note.style.animationDelay = (Math.random() * 5) + 's';
+    note.style.fontSize = (16 + Math.random() * 16) + 'px';
+    container.appendChild(note);
+  }
+}
+
+// ============ INIT ============
+initGrid();
+initBeatGrid();
+renderNoteGrid();
+renderBeatGrid();
+drawAllCharacters();
+spawnFloatingNotes();
+</script>
+</body>
+</html>
